@@ -15,11 +15,7 @@ export async function GET() {
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
             include: {
-                wishlist: {
-                    include: {
-                        hotel: true
-                    }
-                }
+                wishlist: true
             }
         })
 

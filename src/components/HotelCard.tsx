@@ -9,7 +9,6 @@ interface HotelCardProps {
         id: string
         name: string
         description: string
-        price: number
         image: string
         location: string
     }
@@ -41,11 +40,7 @@ export default function HotelCard({ hotel }: HotelCardProps) {
                     {hotel.location}
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{hotel.description}</p>
-                <div className="flex justify-between items-center">
-                    <div>
-                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">${hotel.price}</span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">/night</span>
-                    </div>
+                <div className="flex justify-end">
                     <Link
                         href={`/hotels/${hotel.id}`}
                         className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors transform hover:scale-105 duration-200"

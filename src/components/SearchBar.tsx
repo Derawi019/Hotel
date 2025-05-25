@@ -2,13 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, SlidersHorizontal } from 'lucide-react'
+import { Search, SlidersHorizontal, Calendar, Users } from 'lucide-react'
+import DatePicker from 'react-datepicker'
+import "react-datepicker/dist/react-datepicker.css"
 
 interface SearchFilters {
     query: string
     minPrice: string
     maxPrice: string
     location: string
+    checkIn: Date | null
+    checkOut: Date | null
+    adults: number
+    children: number
 }
 
 export default function SearchBar() {
@@ -19,7 +25,11 @@ export default function SearchBar() {
         query: searchParams.get('query') || '',
         minPrice: searchParams.get('minPrice') || '',
         maxPrice: searchParams.get('maxPrice') || '',
-        location: searchParams.get('location') || ''
+        location: searchParams.get('location') || '',
+        checkIn: searchParams.get('checkIn') ? new Date(searchParams.get('checkIn')!) : null,
+        checkOut: searchParams.get('checkOut') ? new Date(searchParams.get('checkOut')!) : null,
+        adults: parseInt(searchParams.get('adults') || '1'),
+        children: parseInt(searchParams.get('children') || '0')
     })
 
     const handleSearch = (e: React.FormEvent) => {
@@ -30,6 +40,10 @@ export default function SearchBar() {
         if (filters.minPrice) params.set('minPrice', filters.minPrice)
         if (filters.maxPrice) params.set('maxPrice', filters.maxPrice)
         if (filters.location) params.set('location', filters.location)
+        if (filters.checkIn) params.set('checkIn', filters.checkIn.toISOString().split('T')[0])
+        if (filters.checkOut) params.set('checkOut', filters.checkOut.toISOString().split('T')[0])
+        if (filters.adults) params.set('adults', filters.adults.toString())
+        if (filters.children) params.set('children', filters.children.toString())
 
         router.push(`/?${params.toString()}`)
     }
@@ -37,6 +51,23 @@ export default function SearchBar() {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target
         setFilters(prev => ({ ...prev, [name]: value }))
+    }
+
+    const handleDateChange = (dates: [Date | null, Date | null]) => {
+        const [start, end] = dates
+        setFilters(prev => ({
+            ...prev,
+            checkIn: start,
+            checkOut: end
+        }))
+    }
+
+    const handlePersonChange = (type: 'adults' | 'children', value: number) => {
+        if (type === 'adults' && value >= 1) {
+            setFilters(prev => ({ ...prev, adults: value }))
+        } else if (type === 'children' && value >= 0) {
+            setFilters(prev => ({ ...prev, children: value }))
+        }
     }
 
     return (
@@ -71,7 +102,7 @@ export default function SearchBar() {
                 </div>
 
                 {showFilters && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-white">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 border rounded-lg bg-white">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Location
@@ -87,31 +118,92 @@ export default function SearchBar() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Min Price
+                                Check-in / Check-out
                             </label>
-                            <input
-                                type="number"
-                                name="minPrice"
-                                value={filters.minPrice}
-                                onChange={handleInputChange}
-                                placeholder="Min price"
-                                min="0"
+                            <DatePicker
+                                selected={filters.checkIn}
+                                onChange={handleDateChange}
+                                startDate={filters.checkIn}
+                                endDate={filters.checkOut}
+                                selectsRange
+                                minDate={new Date()}
+                                placeholderText="Select dates"
                                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Max Price
+                                Guests
                             </label>
-                            <input
-                                type="number"
-                                name="maxPrice"
-                                value={filters.maxPrice}
-                                onChange={handleInputChange}
-                                placeholder="Max price"
-                                min="0"
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
+                            <div className="flex items-center gap-4">
+                                <div className="flex-1">
+                                    <label className="text-xs text-gray-500">Adults</label>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handlePersonChange('adults', filters.adults - 1)}
+                                            className="p-1 border rounded hover:bg-gray-100"
+                                            disabled={filters.adults <= 1}
+                                        >
+                                            -
+                                        </button>
+                                        <span>{filters.adults}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handlePersonChange('adults', filters.adults + 1)}
+                                            className="p-1 border rounded hover:bg-gray-100"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <label className="text-xs text-gray-500">Children</label>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handlePersonChange('children', filters.children - 1)}
+                                            className="p-1 border rounded hover:bg-gray-100"
+                                            disabled={filters.children <= 0}
+                                        >
+                                            -
+                                        </button>
+                                        <span>{filters.children}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handlePersonChange('children', filters.children + 1)}
+                                            className="p-1 border rounded hover:bg-gray-100"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Price Range
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    name="minPrice"
+                                    value={filters.minPrice}
+                                    onChange={handleInputChange}
+                                    placeholder="Min price"
+                                    min="0"
+                                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                                <input
+                                    type="number"
+                                    name="maxPrice"
+                                    value={filters.maxPrice}
+                                    onChange={handleInputChange}
+                                    placeholder="Max price"
+                                    min="0"
+                                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
                         </div>
                     </div>
                 )}

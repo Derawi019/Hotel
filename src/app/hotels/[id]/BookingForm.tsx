@@ -92,6 +92,25 @@ export default function BookingForm({ hotelId }: BookingFormProps) {
             const selectedRoomData = availableRooms.find(room => room.id === selectedRoom)
             const totalAmount = selectedRoomData ? selectedRoomData.price * nights : 0
 
+            // Create the booking
+            const bookingResponse = await fetch('/api/bookings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    hotelId,
+                    roomId: selectedRoom,
+                    startDate: startDateObj.toISOString(),
+                    endDate: endDateObj.toISOString(),
+                    totalAmount
+                })
+            })
+
+            if (!bookingResponse.ok) {
+                throw new Error('Failed to create booking')
+            }
+
             // Send confirmation email
             const emailResponse = await fetch('/api/email', {
                 method: 'POST',

@@ -4,8 +4,8 @@ import Link from 'next/link'
 import prisma from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import WishlistButton from './WishlistButton'
-import BookingForm from './BookingForm'
+import WishlistButton from '@/components/WishlistButton'
+import RoomCard from '@/components/RoomCard'
 
 interface HotelPageProps {
     params: {
@@ -14,20 +14,35 @@ interface HotelPageProps {
 }
 
 async function getHotel(id: string) {
-    try {
-        const hotel = await prisma.hotel.findUnique({
-            where: { id },
-        })
-
-        if (!hotel) {
-            throw new Error('Hotel not found')
+    const hotel = await prisma.hotel.findUnique({
+        where: { id },
+        include: {
+            rooms: {
+                select: {
+                    id: true,
+                    type: true,
+                    price: true,
+                    description: true,
+                    image: true,
+                    wifi: true,
+                    balcony: true,
+                    oceanView: true,
+                    cityView: true,
+                    minibar: true,
+                    airConditioning: true,
+                    roomService: true,
+                    tv: true,
+                    safe: true
+                }
+            }
         }
+    })
 
-        return hotel
-    } catch (error) {
-        console.error('Error fetching hotel:', error)
-        throw error
+    if (!hotel) {
+        throw new Error('Hotel not found')
     }
+
+    return hotel
 }
 
 export default async function HotelPage({ params }: HotelPageProps) {
@@ -48,7 +63,7 @@ export default async function HotelPage({ params }: HotelPageProps) {
                         Back to Hotels
                     </Link>
 
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden mb-8">
                         <div className="relative h-[400px] group">
                             <Image
                                 src={hotel.image}
@@ -79,41 +94,32 @@ export default async function HotelPage({ params }: HotelPageProps) {
                             <div className="prose max-w-none mb-8">
                                 <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{hotel.description}</p>
                             </div>
+                        </div>
+                    </div>
 
-                            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                                <div className="flex justify-between items-center mb-8">
-                                    <div>
-                                        <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">${hotel.price}</p>
-                                        <p className="text-gray-500 dark:text-gray-400">per night</p>
-                                    </div>
-                                    {session?.user ? (
-                                        <BookingForm hotelId={hotel.id} />
-                                    ) : (
-                                        <Link
-                                            href="/api/auth/signin"
-                                            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 hover:shadow-lg"
-                                        >
-                                            Sign in to Book
-                                        </Link>
-                                    )}
-                                </div>
-                            </div>
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Available Rooms</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {hotel.rooms.map((room) => (
+                                <RoomCard key={room.id} room={room} hotelId={hotel.id} />
+                            ))}
                         </div>
                     </div>
                 </div>
             </div>
         )
     } catch (error) {
+        console.error('Error loading hotel:', error)
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                    <h1 className="text-2xl font-bold text-red-600 mb-4">Hotel Not Found</h1>
-                    <p className="text-gray-600 mb-8">The hotel you're looking for doesn't exist or has been removed.</p>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Error Loading Hotel</h1>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">The hotel you're looking for could not be found.</p>
                     <Link
                         href="/"
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                     >
-                        ← Back to Hotels
+                        Return to Home
                     </Link>
                 </div>
             </div>

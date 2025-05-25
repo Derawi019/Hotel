@@ -62,7 +62,6 @@ model Hotel {
   name        String
   description String
   location    String
-  price       Float
   image       String
   wishlistedBy User[]   @relation("UserWishlist")
   bookings    Booking[]
@@ -72,14 +71,26 @@ model Hotel {
 }
 
 model Room {
-  id        String   @id @default(cuid())
-  type      String   // "single", "double", or "suite"
-  price     Float
-  hotelId   String
-  hotel     Hotel    @relation(fields: [hotelId], references: [id])
-  bookings  Booking[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  type        String   // "single", "double", or "suite"
+  price       Float
+  hotelId     String
+  hotel       Hotel    @relation(fields: [hotelId], references: [id])
+  bookings    Booking[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // Room properties
+  wifi        Boolean  @default(true)
+  balcony     Boolean  @default(false)
+  oceanView   Boolean  @default(false)
+  cityView    Boolean  @default(false)
+  minibar     Boolean  @default(true)
+  airConditioning Boolean @default(true)
+  roomService Boolean  @default(true)
+  tv          Boolean  @default(true)
+  safe        Boolean  @default(true)
+  image       String   // URL to room image
+  description String   // Detailed room description
 }
 
 model Booking {

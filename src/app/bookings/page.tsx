@@ -1,9 +1,9 @@
 import React from 'react'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]/route'
-import prisma from '@/lib/prisma'
 import Image from 'next/image'
 import Link from 'next/link'
+import prisma from '@/lib/prisma'
 
 export default async function BookingsPage() {
     const session = await getServerSession(authOptions)
@@ -29,7 +29,15 @@ export default async function BookingsPage() {
     }
 
     const user = await prisma.user.findUnique({
-        where: { email: session.user.email }
+        where: { email: session.user.email },
+        include: {
+            bookings: {
+                include: {
+                    hotel: true,
+                    room: true
+                }
+            }
+        }
     })
 
     if (!user) {
@@ -52,24 +60,12 @@ export default async function BookingsPage() {
         )
     }
 
-    const bookings = await prisma.booking.findMany({
-        where: {
-            userId: user.id
-        },
-        include: {
-            hotel: true
-        },
-        orderBy: {
-            createdAt: 'desc'
-        }
-    })
-
     return (
         <div className="min-h-screen bg-gray-50 py-12">
             <div className="max-w-7xl mx-auto px-4">
                 <h1 className="text-3xl font-bold text-gray-900 mb-8">My Bookings</h1>
 
-                {bookings.length === 0 ? (
+                {user.bookings.length === 0 ? (
                     <div className="text-center py-12">
                         <h2 className="text-xl text-gray-600 mb-4">No bookings found</h2>
                         <Link
@@ -81,7 +77,7 @@ export default async function BookingsPage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-6">
-                        {bookings.map((booking) => (
+                        {user.bookings.map((booking) => (
                             <div
                                 key={booking.id}
                                 className="bg-white rounded-lg shadow-lg overflow-hidden"

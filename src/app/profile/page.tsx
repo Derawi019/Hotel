@@ -1,107 +1,123 @@
-import React from 'react'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import prisma from '@/lib/prisma'
+'use client'
+
+import { useSession } from 'next-auth/react'
+import { useState, useRef } from 'react'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import ProfileForm from './ProfileForm'
 import PaymentMethods from './PaymentMethods'
 import Preferences from './Preferences'
 
-export default async function ProfilePage() {
-    const session = await getServerSession(authOptions)
+export default function ProfilePage() {
+    const { data: session, update } = useSession()
+    const [isUploading, setIsUploading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const router = useRouter()
 
-    if (!session?.user) {
-        redirect('/auth/signin')
+    const handleImageClick = () => {
+        fileInputRef.current?.click()
     }
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        include: {
-            bookings: {
-                include: {
-                    hotel: true,
-                    room: true
-                },
-                orderBy: {
-                    createdAt: 'desc'
-                }
-            },
-            wishlist: true
-        }
-    })
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
 
-    if (!user) {
-        redirect('/auth/signin')
+        setIsUploading(true)
+        setError(null)
+
+        try {
+            const formData = new FormData()
+            formData.append('image', file)
+
+            const response = await fetch('/api/user/profile-picture', {
+                method: 'POST',
+                body: formData,
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to upload image')
+            }
+
+            const data = await response.json()
+            console.log('Upload response:', data)
+
+            // Update the session to reflect the new image
+            await update({
+                ...session,
+                user: {
+                    ...session?.user,
+                    image: data.url
+                }
+            })
+
+            // Force a router refresh to update the UI
+            router.refresh()
+        } catch (err) {
+            console.error('Error uploading image:', err)
+            setError('Failed to upload image. Please try again.')
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
+    if (!session) {
+        return <div>Please sign in to view your profile.</div>
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 py-8">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold">My Profile</h1>
-                    <p className="text-gray-600">Manage your account settings and preferences</p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left Sidebar */}
-                    <div className="lg:col-span-1">
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <div className="flex items-center space-x-4 mb-6">
-                                <div className="relative w-20 h-20 rounded-full overflow-hidden">
-                                    <img
-                                        src={user.image || '/default-avatar.png'}
-                                        alt={user.name || 'User'}
-                                        className="object-cover w-full h-full"
+        <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mx-auto">
+                <div className="bg-white shadow rounded-lg p-6">
+                    <div className="flex flex-col items-center space-y-4">
+                        <div className="relative">
+                            <div
+                                className="w-32 h-32 rounded-full overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={handleImageClick}
+                            >
+                                {session.user?.image ? (
+                                    <Image
+                                        src={session.user.image}
+                                        alt="Profile"
+                                        width={128}
+                                        height={128}
+                                        className="object-cover"
+                                        priority
                                     />
-                                </div>
-                                <div>
-                                    <h2 className="text-xl font-semibold">{user.name}</h2>
-                                    <p className="text-gray-600">{user.email}</p>
-                                </div>
+                                ) : (
+                                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                        <span className="text-gray-400">No image</span>
+                                    </div>
+                                )}
                             </div>
-                            <nav className="space-y-2">
-                                <Link
-                                    href="/profile"
-                                    className="block px-4 py-2 text-blue-600 bg-blue-50 rounded-lg"
-                                >
-                                    Profile Information
-                                </Link>
-                                <Link
-                                    href="/profile/payment"
-                                    className="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
-                                >
-                                    Payment Methods
-                                </Link>
-                                <Link
-                                    href="/profile/preferences"
-                                    className="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
-                                >
-                                    Preferences
-                                </Link>
-                                <Link
-                                    href="/bookings"
-                                    className="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
-                                >
-                                    Booking History
-                                </Link>
-                                <Link
-                                    href="/wishlist"
-                                    className="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
-                                >
-                                    Wishlist
-                                </Link>
-                            </nav>
+                            {isUploading && (
+                                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                                    <div className="text-white">Uploading...</div>
+                                </div>
+                            )}
                         </div>
-                    </div>
-
-                    {/* Main Content */}
-                    <div className="lg:col-span-2">
-                        <div className="bg-white rounded-lg shadow">
-                            <div className="p-6">
-                                <h2 className="text-2xl font-semibold mb-6">Profile Information</h2>
-                                <ProfileForm user={user} />
-                            </div>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            accept="image/*"
+                            className="hidden"
+                        />
+                        <button
+                            onClick={handleImageClick}
+                            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                            disabled={isUploading}
+                        >
+                            {isUploading ? 'Uploading...' : 'Change Profile Picture'}
+                        </button>
+                        {error && (
+                            <div className="text-red-500 text-sm">{error}</div>
+                        )}
+                        <div className="mt-4 text-center">
+                            <h2 className="text-2xl font-bold">{session.user?.name}</h2>
+                            <p className="text-gray-600">{session.user?.email}</p>
                         </div>
                     </div>
                 </div>
