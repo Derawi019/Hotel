@@ -1,9 +1,12 @@
 {
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/user/preferences/route": "app/api/user/preferences/route.js",
-  "/api/user/profile-picture/route": "app/api/user/profile-picture/route.js",
   "/page": "app/page.js",
+  "/auth/signin/page": "app/auth/signin/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/api/wishlist/route": "app/api/wishlist/route.js",
-  "/profile/page": "app/profile/page.js",
-  "/profile/preferences/page": "app/profile/preferences/page.js"
+  "/hotels/[id]/page": "app/hotels/[id]/page.js",
+  "/hotels/[id]/booking/[roomId]/page": "app/hotels/[id]/booking/[roomId]/page.js",
+  "/api/rooms/[roomId]/route": "app/api/rooms/[roomId]/route.js",
+  "/api/bookings/route": "app/api/bookings/route.js",
+  "/bookings/page": "app/bookings/page.js",
+  "/api/user/bookings/route": "app/api/user/bookings/route.js"
 }

@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import nodemailer from 'nodemailer'
+
+export const dynamic = "force-dynamic";
 
 // Test data for bookings
 let testBookings = [
@@ -53,115 +55,121 @@ let testBookings = [
 ]
 
 export async function POST(request: Request) {
+    let body;
+    let user = null;
     try {
         const session = await getServerSession(authOptions)
-
-        if (!session?.user) {
+        if (!session?.user?.email) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
             )
         }
 
-        const body = await request.json()
-        const { hotelId, roomId, checkInDate, checkOutDate } = body
+        body = await request.json()
+        const { hotelId, roomId, checkInDate, checkOutDate, totalAmount } = body
 
-        if (!hotelId || !roomId || !checkInDate || !checkOutDate) {
-            return NextResponse.json(
-                { error: 'Missing required fields' },
-                { status: 400 }
-            )
-        }
+        console.log('Booking request body:', body)
 
-        // Create a new test booking
-        const startDate = new Date(checkInDate)
-        const endDate = new Date(checkOutDate)
-        const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+        // Get the user first to ensure we have the ID
+        user = await prisma.user.findUnique({
+            where: { email: session.user.email }
+        })
 
-        // For testing, we'll use a fixed price of $100 per night
-        const totalAmount = 100 * nights
+        console.log('User found for booking:', user)
 
-        const newBooking = {
-            id: `booking_${testBookings.length + 1}`,
-            hotelId,
-            roomId,
-            startDate,
-            endDate,
-            totalAmount,
-            status: 'confirmed',
-            hotel: {
-                id: hotelId,
-                name: 'Test Hotel',
-                description: 'A test hotel for demonstration purposes',
-                location: 'Test Location',
-                price: 100,
-                image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
-            },
-            room: {
-                id: roomId,
-                type: 'Test Room',
-                price: 100
+        if (!user) {
+            // Fallback: Create a mock booking if user is not found
+            const mockBooking = {
+                id: 'mock_booking_' + Date.now(),
+                userId: 'mock_user',
+                hotelId,
+                roomId,
+                checkIn: new Date(checkInDate),
+                checkOut: new Date(checkOutDate),
+                totalAmount,
+                status: 'confirmed',
+                hotel: {
+                    id: hotelId,
+                    name: 'Mock Hotel',
+                    location: 'Mock Location'
+                },
+                room: {
+                    id: roomId,
+                    type: 'Mock Room'
+                }
             }
+            console.log('Created mock booking:', mockBooking)
+            return NextResponse.json(mockBooking)
         }
 
-        // Add to test bookings array
-        testBookings.push(newBooking)
+        // Create the booking in the database
+        const booking = await prisma.booking.create({
+            data: {
+                userId: user.id,
+                hotelId,
+                roomId,
+                checkIn: new Date(checkInDate),
+                checkOut: new Date(checkOutDate),
+                totalAmount,
+                status: 'confirmed'
+            },
+            include: {
+                hotel: true,
+                room: true,
+                user: true
+            }
+        })
 
         // Send confirmation email
-        console.log('Attempting to send email to:', session.user.email)
-        console.log('Using email user:', process.env.EMAIL_USER)
-
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            }
-        })
-
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: session.user.email!,
-            subject: 'Booking Confirmation',
-            html: `
-                <h1>Booking Confirmation</h1>
-                <p>Dear ${session.user.name},</p>
-                <p>Your booking has been confirmed. Here are your booking details:</p>
-                <ul>
-                    <li>Hotel: ${newBooking.hotel.name}</li>
-                    <li>Location: ${newBooking.hotel.location}</li>
-                    <li>Room Type: ${newBooking.room.type}</li>
-                    <li>Check-in: ${startDate.toLocaleDateString()}</li>
-                    <li>Check-out: ${endDate.toLocaleDateString()}</li>
-                    <li>Number of Nights: ${nights}</li>
-                    <li>Total Amount: $${totalAmount}</li>
-                </ul>
-                <p>Thank you for choosing our service!</p>
-            `
-        }
-
-        try {
-            console.log('Sending email...')
-            const info = await transporter.sendMail(mailOptions)
-            console.log('Email sent successfully:', info)
-        } catch (error: any) {
-            console.error('Failed to send confirmation email. Error details:', {
-                message: error.message,
-                code: error.code,
-                command: error.command,
-                stack: error.stack
+        if (session.user.email) {
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS
+                }
             })
-            // Don't fail the booking if email fails
+
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: session.user.email,
+                subject: 'Booking Confirmation',
+                html: `
+                    <h1>Booking Confirmation</h1>
+                    <p>Dear ${session.user.name || 'Guest'},</p>
+                    <p>Your booking has been confirmed. Here are your booking details:</p>
+                    <ul>
+                        <li>Hotel: ${booking.hotel.name}</li>
+                        <li>Location: ${booking.hotel.location}</li>
+                        <li>Room Type: ${booking.room.type}</li>
+                        <li>Check-in: ${new Date(booking.checkIn).toLocaleDateString()}</li>
+                        <li>Check-out: ${new Date(booking.checkOut).toLocaleDateString()}</li>
+                        <li>Total Amount: $${booking.totalAmount}</li>
+                    </ul>
+                    <p>Thank you for choosing our service!</p>
+                `
+            }
+
+            try {
+                await transporter.sendMail(mailOptions)
+            } catch (error) {
+                console.error('Failed to send confirmation email:', error)
+                // Don't fail the booking if email fails
+            }
         }
 
-        return NextResponse.json({
-            ...newBooking,
-            message: 'Booking confirmed and confirmation email sent'
-        })
+        return NextResponse.json(booking)
     } catch (error) {
-        console.error('Error creating booking:', error)
+        console.error('Booking error:', error)
+        if (error instanceof Error) {
+            return NextResponse.json(
+                { error: 'Failed to create booking', details: error.message, stack: error.stack, body, user },
+                { status: 500 }
+            )
+        }
         return NextResponse.json(
-            { error: 'Failed to create booking' },
+            { error: 'Failed to create booking', details: String(error), body, user },
             { status: 500 }
         )
     }

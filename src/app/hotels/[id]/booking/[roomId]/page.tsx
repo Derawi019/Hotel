@@ -74,6 +74,11 @@ export default function BookingConfirmationPage({ params }: BookingConfirmationP
             return
         }
 
+        if (!room) {
+            alert('Room information not available. Please try again.')
+            return
+        }
+
         setIsBooking(true)
         try {
             const response = await fetch('/api/bookings', {
@@ -86,6 +91,7 @@ export default function BookingConfirmationPage({ params }: BookingConfirmationP
                     roomId: params.roomId,
                     checkInDate,
                     checkOutDate,
+                    totalAmount: room.price * Math.ceil((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / (1000 * 60 * 60 * 24))
                 }),
             })
 
@@ -93,7 +99,9 @@ export default function BookingConfirmationPage({ params }: BookingConfirmationP
                 throw new Error('Failed to create booking')
             }
 
+            const booking = await response.json()
             setBookingSuccess(true)
+            router.push('/bookings')
         } catch (err) {
             console.error('Error creating booking:', err)
             alert('Failed to create booking. Please try again.')

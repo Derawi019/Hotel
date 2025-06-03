@@ -5,8 +5,11 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Image from 'next/image'
+import { Suspense } from 'react'
 
-export default function SignIn() {
+export const dynamic = "force-dynamic"
+
+function SignInInner() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const [error, setError] = useState('')
@@ -159,5 +162,13 @@ export default function SignIn() {
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function SignIn() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <SignInInner />
+        </Suspense>
     )
 } 

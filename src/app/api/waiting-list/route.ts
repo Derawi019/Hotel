@@ -62,7 +62,7 @@ export async function GET(req: Request) {
 
         await connectToDatabase()
 
-        const query = { userId: session.user.id }
+        const query = { userId: session.user.id } as any
         if (propertyId) {
             query.propertyId = propertyId
         }

@@ -1,9 +1,10 @@
 {
   "pages": {
-    "/profile/layout": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/profile/layout.js"
+      "static/css/app/page.css",
+      "static/chunks/app/page.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
@@ -11,21 +12,25 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/profile/page": [
+    "/auth/signin/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/profile/page.js"
+      "static/chunks/app/auth/signin/page.js"
     ],
-    "/profile/preferences/page": [
+    "/hotels/[id]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/profile/preferences/page.js"
+      "static/chunks/app/hotels/[id]/page.js"
     ],
-    "/page": [
+    "/hotels/[id]/booking/[roomId]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/page.css",
-      "static/chunks/app/page.js"
+      "static/chunks/app/hotels/[id]/booking/[roomId]/page.js"
+    ],
+    "/bookings/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/bookings/page.js"
     ]
   }
 }

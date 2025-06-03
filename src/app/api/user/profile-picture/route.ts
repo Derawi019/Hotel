@@ -2,11 +2,9 @@ import { NextResponse } from 'next/server'
 import { writeFile, mkdir, access } from 'fs/promises'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
-import { db } from '@/lib/db/index'
-import { users } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import prisma from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
@@ -27,14 +25,13 @@ export async function POST(request: Request) {
         // Check if user exists in database
         try {
             console.log('Checking if user exists in database...')
-            const existingUser = await db.select()
-                .from(users)
-                .where(eq(users.email, session.user.email))
-                .limit(1)
+            const existingUser = await prisma.user.findUnique({
+                where: { email: session.user.email }
+            })
 
             console.log('Existing user check result:', existingUser)
 
-            if (!existingUser || existingUser.length === 0) {
+            if (!existingUser) {
                 console.error('User not found in database:', session.user.email)
                 return NextResponse.json({ error: 'User not found' }, { status: 404 })
             }
@@ -112,26 +109,25 @@ export async function POST(request: Request) {
             // Update user's profile picture URL in database
             try {
                 console.log('Updating user profile picture URL in database...')
-                const result = await db.update(users)
-                    .set({
-                        imageUrl: url,
+                const result = await prisma.user.update({
+                    where: { email: session.user.email },
+                    data: {
+                        image: url,
                         updatedAt: new Date()
-                    })
-                    .where(eq(users.email, session.user.email))
-                    .returning()
+                    }
+                })
 
                 console.log('Database update result:', result)
 
-                if (!result || result.length === 0) {
+                if (!result) {
                     console.error('Failed to update user:', session.user.email)
                     return NextResponse.json({ error: 'Failed to update profile picture' }, { status: 500 })
                 }
 
                 // Verify the update
-                const verifyUser = await db.select()
-                    .from(users)
-                    .where(eq(users.email, session.user.email))
-                    .limit(1)
+                const verifyUser = await prisma.user.findUnique({
+                    where: { email: session.user.email }
+                })
                 console.log('Verification - User data after update:', verifyUser)
 
                 console.log('Database updated successfully for user:', session.user.email)

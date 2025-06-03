@@ -1,13 +1,10 @@
 import React from 'react'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { CurrencyProvider } from '@/components/CurrencyProvider'
 import { AuthProvider } from '@/components/AuthProvider'
 import Navbar from '../components/Navbar'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
     title: 'Hotel Booking App',
@@ -21,7 +18,7 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <body className={inter.className}>
+            <body style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif' }}>
                 <AuthProvider>
                     <ThemeProvider>
                         <CurrencyProvider>

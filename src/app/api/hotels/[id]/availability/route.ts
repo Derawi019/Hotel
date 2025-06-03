@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
@@ -25,47 +27,57 @@ export async function GET(
             }
         })
 
-        // Get all bookings that overlap with the requested dates
-        const overlappingBookings = await prisma.booking.findMany({
+        // Get all bookings for these rooms in the date range
+        const bookings = await prisma.booking.findMany({
             where: {
-                roomId: {
-                    in: rooms.map((room) => room.id)
-                },
                 OR: [
                     {
                         // Booking starts during the requested period
-                        startDate: {
+                        checkIn: {
                             lte: new Date(endDate),
                             gte: new Date(startDate)
                         }
                     },
                     {
                         // Booking ends during the requested period
-                        endDate: {
+                        checkOut: {
                             lte: new Date(endDate),
                             gte: new Date(startDate)
                         }
                     },
                     {
                         // Booking spans the entire requested period
-                        AND: [
-                            { startDate: { lte: new Date(startDate) } },
-                            { endDate: { gte: new Date(endDate) } }
-                        ]
+                        checkIn: {
+                            lte: new Date(startDate)
+                        },
+                        checkOut: {
+                            gte: new Date(endDate)
+                        }
                     }
-                ]
+                ],
+                status: 'confirmed'
             }
         })
 
-        // Filter out rooms that have overlapping bookings
-        const bookedRoomIds = new Set(overlappingBookings.map((booking) => booking.roomId))
-        const availableRooms = rooms.filter((room) => !bookedRoomIds.has(room.id))
+        // Create a map of room IDs to their bookings
+        const roomBookings = new Map<string, Prisma.BookingGetPayload<{}>[]>()
+        bookings.forEach((booking: Prisma.BookingGetPayload<{}>) => {
+            const bookings = roomBookings.get(booking.roomId) || []
+            bookings.push(booking)
+            roomBookings.set(booking.roomId, bookings)
+        })
 
-        return NextResponse.json({ rooms: availableRooms })
+        // Filter out rooms that are fully booked
+        const availableRooms = rooms.filter((room: Prisma.RoomGetPayload<{}>) => {
+            const roomBookingList = roomBookings.get(room.id) || []
+            return roomBookingList.length === 0
+        })
+
+        return NextResponse.json({ availableRooms })
     } catch (error) {
         console.error('Error checking availability:', error)
         return NextResponse.json(
-            { error: 'Failed to check room availability' },
+            { error: 'Failed to check availability' },
             { status: 500 }
         )
     }

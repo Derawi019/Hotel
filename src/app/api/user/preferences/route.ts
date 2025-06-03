@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 
+export const dynamic = "force-dynamic";
+
 type UserPreferences = {
     emailNotifications: boolean
     smsNotifications: boolean
@@ -29,7 +31,7 @@ export async function GET() {
         }
 
         const user = await prisma.user.findUnique({
-            where: { email: session.user.email }
+            where: { email: session.user.email as string }
         })
 
         if (!user) {
@@ -70,7 +72,7 @@ export async function PUT(request: Request) {
         }
 
         const user = await prisma.user.update({
-            where: { email: session.user.email },
+            where: { email: session.user.email as string },
             data: {
                 preferences: preferences as any
             }

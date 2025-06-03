@@ -119,6 +119,28 @@ export default function ProfilePage() {
                             <h2 className="text-2xl font-bold">{session.user?.name}</h2>
                             <p className="text-gray-600">{session.user?.email}</p>
                         </div>
+
+                        {/* Navigation Links */}
+                        <div className="mt-6 space-y-2">
+                            <Link
+                                href="/profile/preferences"
+                                className="block px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition-colors"
+                            >
+                                Manage Preferences
+                            </Link>
+                            <Link
+                                href="/bookings"
+                                className="block px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition-colors"
+                            >
+                                View Bookings
+                            </Link>
+                            <Link
+                                href="/wishlist"
+                                className="block px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition-colors"
+                            >
+                                My Wishlist
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>

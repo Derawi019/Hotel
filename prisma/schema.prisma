@@ -98,8 +98,8 @@ model Booking {
   userId      String
   hotelId     String
   roomId      String
-  startDate   DateTime
-  endDate     DateTime
+  checkIn     DateTime
+  checkOut    DateTime
   totalAmount Float
   status      String   @default("confirmed")
   createdAt   DateTime @default(now())

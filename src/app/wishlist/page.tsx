@@ -1,23 +1,64 @@
-import React from 'react'
+'use client'
+
+import { useSession } from 'next-auth/react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import prisma from '@/lib/prisma'
+import { Hotel } from '@prisma/client'
 
-interface WishlistItem {
-    id: string
-    name: string
-    description: string
-    price: number
-    image: string
-    location: string
-}
+export default function WishlistPage() {
+    const { data: session } = useSession()
+    const [wishlist, setWishlist] = useState<Hotel[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
-export default async function WishlistPage() {
-    const session = await getServerSession(authOptions)
+    useEffect(() => {
+        const fetchWishlist = async () => {
+            if (!session?.user?.email) {
+                setLoading(false)
+                return
+            }
 
-    if (!session?.user?.email) {
+            try {
+                const response = await fetch('/api/user/wishlist')
+                if (!response.ok) {
+                    const errorData = await response.text()
+                    throw new Error(errorData || 'Failed to fetch wishlist')
+                }
+                const data = await response.json()
+                console.log('Fetched wishlist data:', data)
+                setWishlist(data)
+            } catch (err) {
+                console.error('Error fetching wishlist:', err)
+                setError(err instanceof Error ? err.message : 'Failed to load wishlist')
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchWishlist()
+    }, [session])
+
+    const removeFromWishlist = async (hotelId: string) => {
+        try {
+            const response = await fetch(`/api/user/wishlist/${hotelId}`, {
+                method: 'DELETE',
+            })
+
+            if (!response.ok) {
+                const errorData = await response.text()
+                throw new Error(errorData || 'Failed to remove from wishlist')
+            }
+
+            // Update the wishlist state by removing the hotel
+            setWishlist(wishlist.filter(hotel => hotel.id !== hotelId))
+        } catch (err) {
+            console.error('Error removing from wishlist:', err)
+            setError(err instanceof Error ? err.message : 'Failed to remove from wishlist')
+        }
+    }
+
+    if (!session) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
@@ -34,88 +75,90 @@ export default async function WishlistPage() {
         )
     }
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        include: {
-            wishlist: {
-                select: {
-                    id: true,
-                    name: true,
-                    description: true,
-                    price: true,
-                    image: true,
-                    location: true
-                }
-            }
-        }
-    })
-
-    if (!user) {
+    if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                    <h1 className="text-2xl font-bold text-red-600 mb-4">User Not Found</h1>
-                    <p className="text-gray-600 mb-8">Please try signing in again.</p>
-                    <Link
-                        href="/auth/signin"
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading your wishlist...</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
+                    <p className="text-gray-600 mb-8">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
                         className="text-blue-600 hover:text-blue-800"
                     >
-                        Sign In
-                    </Link>
+                        Try Again
+                    </button>
                 </div>
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-3xl font-bold">My Wishlist</h1>
+                    <h1 className="text-3xl font-bold text-gray-900">My Wishlist</h1>
                     <Link
-                        href="/"
+                        href="/hotels"
                         className="text-blue-600 hover:text-blue-800"
                     >
                         ← Back to Hotels
                     </Link>
                 </div>
 
-                {user.wishlist.length === 0 ? (
-                    <div className="text-center py-12">
-                        <h2 className="text-xl text-gray-600 mb-4">Your wishlist is empty</h2>
+                {wishlist.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-lg shadow">
+                        <p className="text-gray-500 mb-4">Your wishlist is empty</p>
                         <Link
-                            href="/"
-                            className="text-blue-600 hover:text-blue-800"
+                            href="/hotels"
+                            className="inline-block px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                         >
                             Browse Hotels
                         </Link>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {user.wishlist.map((hotel: WishlistItem) => (
-                            <div key={hotel.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {wishlist.map((hotel) => (
+                            <div key={hotel.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                                 <div className="relative h-48">
-                                    <Image
-                                        src={hotel.image}
-                                        alt={hotel.name}
-                                        fill
-                                        className="object-cover"
-                                    />
+                                    {hotel.image && (
+                                        <Image
+                                            src={hotel.image}
+                                            alt={hotel.name}
+                                            fill
+                                            className="object-cover"
+                                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                        />
+                                    )}
                                 </div>
-                                <div className="p-6">
-                                    <h3 className="text-xl font-semibold mb-2">{hotel.name}</h3>
-                                    <p className="text-gray-600 mb-2">{hotel.location}</p>
-                                    <p className="text-gray-700 mb-4">{hotel.description}</p>
+                                <div className="p-4">
+                                    <h2 className="text-xl font-semibold mb-2">{hotel.name}</h2>
+                                    <p className="text-gray-600 mb-4">{hotel.description}</p>
+                                    <p className="text-gray-500 mb-4">{hotel.location}</p>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-2xl font-bold">${hotel.price}</span>
-                                        <span className="text-gray-500">per night</span>
+                                        <Link
+                                            href={`/hotels/${hotel.id}`}
+                                            className="text-blue-500 hover:text-blue-600"
+                                        >
+                                            View Details
+                                        </Link>
+                                        <button
+                                            onClick={() => removeFromWishlist(hotel.id)}
+                                            className="text-red-500 hover:text-red-600"
+                                        >
+                                            Remove
+                                        </button>
                                     </div>
-                                    <Link
-                                        href={`/hotels/${hotel.id}`}
-                                        className="block w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors text-center"
-                                    >
-                                        View Details
-                                    </Link>
                                 </div>
                             </div>
                         ))}

@@ -5,7 +5,7 @@ export const users = pgTable('users', {
     id: text('id').primaryKey(),
     name: text('name'),
     email: text('email').unique(),
-    imageUrl: text('image_url'),
+    image: text('image'),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: timestamp('updated_at').default(sql`CURRENT_TIMESTAMP`),
 }) 

@@ -101,8 +101,8 @@ export default function BookingForm({ hotelId }: BookingFormProps) {
                 body: JSON.stringify({
                     hotelId,
                     roomId: selectedRoom,
-                    startDate: startDateObj.toISOString(),
-                    endDate: endDateObj.toISOString(),
+                    checkInDate: startDateObj.toISOString(),
+                    checkOutDate: endDateObj.toISOString(),
                     totalAmount
                 })
             })

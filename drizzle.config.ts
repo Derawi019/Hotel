@@ -1,11 +1,11 @@
 import type { Config } from 'drizzle-kit'
 
 export default {
-    schema: './src/lib/db/schema.ts',
+    schema: './prisma/schema.prisma',
     out: './drizzle',
-    dialect: 'sqlite',
-    driver: 'better-sqlite',
+    dialect: 'postgresql',
+    driver: 'pglite',
     dbCredentials: {
-        url: 'sqlite.db'
+        url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/booking'
     },
 } satisfies Config 

@@ -23,11 +23,26 @@ async function main() {
                 id TEXT PRIMARY KEY,
                 name TEXT,
                 email TEXT UNIQUE,
-                image_url TEXT,
+                image TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `)
+
+        // Check if image_url column exists and rename it to image if it does
+        await db.execute(sql`
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name = 'users'
+                    AND column_name = 'image_url'
+                ) THEN
+                    ALTER TABLE users RENAME COLUMN image_url TO image;
+                END IF;
+            END $$;
+        `);
 
         console.log('Migration completed successfully!')
     } catch (error) {
